@@ -19,23 +19,23 @@ const DialogueSidebar = ({ files, onFileSelect, selectedFileId }: DialogueSideba
   };
 
   return (
-    <div className={`transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'} bg-white border-r`}>
+    <div className={`transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80 md:w-80 w-72'} bg-white border-r h-full`}>
       <div className="p-4 border-b flex items-center justify-between">
         {!isCollapsed && (
-          <h2 className="text-lg font-semibold text-gray-800">Диалоги</h2>
+          <h2 className="text-base md:text-lg font-semibold text-gray-800">Диалоги</h2>
         )}
         <Button 
           variant="ghost" 
           size="sm"
           onClick={toggleSidebar}
-          className="ml-auto"
+          className="ml-auto hidden md:flex"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
       
       {!isCollapsed && (
-        <div className="p-4 space-y-2">
+        <div className="p-3 md:p-4 space-y-2 overflow-y-auto max-h-[calc(100vh-80px)]">
           {files.map((file) => (
             <Card 
               key={file.id} 
@@ -44,10 +44,10 @@ const DialogueSidebar = ({ files, onFileSelect, selectedFileId }: DialogueSideba
               }`}
               onClick={() => onFileSelect(file)}
             >
-              <CardContent className="p-3">
+              <CardContent className="p-2 md:p-3">
                 <div className="flex items-center space-x-2">
                   <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-800 truncate">{file.name}</span>
+                  <span className="text-xs md:text-sm font-medium text-gray-800 truncate">{file.name}</span>
                 </div>
               </CardContent>
             </Card>
