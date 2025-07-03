@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { DialogueFile } from '@/types/dialogue';
+import { DialogueFile, DialogueEntry } from '@/types/dialogue';
 
 // Моковые данные для демонстрации
 const mockDialogueFiles: DialogueFile[] = [
@@ -73,5 +73,33 @@ export const useDialogueFiles = () => {
     loadFiles();
   }, []);
 
-  return { files, loading };
+  const updateDialogue = (fileId: string, dialogueIndex: number, updatedDialogue: DialogueEntry) => {
+    setFiles(prevFiles => 
+      prevFiles.map(file => 
+        file.id === fileId 
+          ? {
+              ...file,
+              dialogues: file.dialogues.map((dialogue, index) => 
+                index === dialogueIndex ? updatedDialogue : dialogue
+              )
+            }
+          : file
+      )
+    );
+  };
+
+  const deleteDialogue = (fileId: string, dialogueIndex: number) => {
+    setFiles(prevFiles => 
+      prevFiles.map(file => 
+        file.id === fileId 
+          ? {
+              ...file,
+              dialogues: file.dialogues.filter((_, index) => index !== dialogueIndex)
+            }
+          : file
+      )
+    );
+  };
+
+  return { files, loading, updateDialogue, deleteDialogue };
 };

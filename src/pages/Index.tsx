@@ -8,12 +8,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  const { files, loading } = useDialogueFiles();
+  const { files, loading, updateDialogue, deleteDialogue } = useDialogueFiles();
   const [selectedFile, setSelectedFile] = useState<DialogueFile | null>(null);
 
   const handleFileSelect = (file: DialogueFile) => {
     setSelectedFile(file);
   };
+
+  // Обновляем выбранный файл при изменении данных
+  const selectedFileData = selectedFile ? files.find(f => f.id === selectedFile.id) : null;
 
   if (loading) {
     return (
@@ -48,8 +51,12 @@ const Index = () => {
           
           {/* Таблица диалогов */}
           <div className="lg:col-span-2">
-            {selectedFile ? (
-              <DialogueTable file={selectedFile} />
+            {selectedFileData ? (
+              <DialogueTable 
+                file={selectedFileData} 
+                onUpdateDialogue={updateDialogue}
+                onDeleteDialogue={deleteDialogue}
+              />
             ) : (
               <Card className="h-full flex items-center justify-center">
                 <CardContent className="text-center py-12">
