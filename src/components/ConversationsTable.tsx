@@ -828,21 +828,43 @@ const ConversationsTable = ({
                     </TableCell>
                     <TableCell>
                       {editingId === conv.id ? (
-                        <>
-                          <Button onClick={() => handleSave(conv.id)}>
-                            <Save className="h-4 w-4" />
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={() => handleSave(conv.id)}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Сохранить
                           </Button>
-                          <Button onClick={handleCancel}>Отмена</Button>
-                        </>
+                          <Button
+                            onClick={handleCancel}
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-300 hover:bg-gray-50"
+                          >
+                            Отмена
+                          </Button>
+                        </div>
                       ) : (
-                        <>
-                          <Button onClick={() => handleEdit(conv)}>
-                            <Edit className="h-4 w-4" />
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={() => handleEdit(conv)}
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
                           </Button>
-                          <Button onClick={() => handleDelete(conv.id)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button
+                            onClick={() => handleDelete(conv.id)}
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
                           </Button>
-                        </>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -852,6 +874,72 @@ const ConversationsTable = ({
           </div>
         </div>
       </CardContent>
+
+      {/* Пагинация */}
+      {totalPages > 1 && (
+        <div className="border-t bg-gray-50 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Показано {startIndex + 1}-
+              {Math.min(
+                startIndex + itemsPerPage,
+                filteredConversations.length
+              )}{" "}
+              из {filteredConversations.length} записей
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1"
+              >
+                ← Назад
+              </Button>
+
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCurrentPage(Math.min(totalPages, currentPage + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-3 py-1"
+              >
+                Вперед →
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

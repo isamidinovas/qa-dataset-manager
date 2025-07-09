@@ -16,22 +16,6 @@ const initialState: ConversationsState = {
   error: null,
 };
 
-// export const fetchConversationsByDataset = createAsyncThunk<
-//   Conversation[],
-//   { datasetId: string; search?: string }
-// >(
-//   "conversations/fetchConversationsByDataset",
-//   async ({ datasetId, search }) => {
-//     try {
-//       const response = await apiService.getConversationsByDataset(datasetId, {
-//         search,
-//       });
-//       return response.data.data; // Extract the conversations array from the nested response
-//     } catch (error) {
-//       throw new Error(error instanceof Error ? error.message : "Unknown error");
-//     }
-//   }
-// );
 export const fetchConversationsByDataset = createAsyncThunk<
   Conversation[],
   { datasetId: number; search?: string }

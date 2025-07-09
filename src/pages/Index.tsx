@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import DataSidebar from "@/components/DialogueSidebar";
 import DialogueTable from "@/components/DialogueTable";
 import ConversationsTable from "@/components/ConversationsTable";
-import ApiTest from "@/components/ApiTest";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Menu, X, Search } from "lucide-react";
@@ -104,7 +103,6 @@ const Index = () => {
           Просмотр данных
         </h1>
         <div className="flex items-center gap-4">
-          <ApiTest />
           <div className="relative w-80 hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
