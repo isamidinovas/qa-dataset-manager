@@ -17,11 +17,13 @@ export interface DialogueFile {
 }
 
 const Index = () => {
-  const dispatch = useAppDispatch();
   const {
     conversations,
     loading,
     error,
+    searchQuery,
+    setSearchQuery,
+    fetchConversations,
     updateConversation,
     deleteConversation,
   } = useConversationsRedux();
@@ -39,13 +41,19 @@ const Index = () => {
 
   const [selectedFile, setSelectedFile] = useState<DialogueFile | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const handleFileSelect = (file: DialogueFile) => {
     setSelectedFile(file);
     setIsMobileSidebarOpen(false);
-    dispatch(fetchConversationsByDataset({ datasetId: file.id }));
+    fetchConversations(file.id, searchQuery);
   };
+
+  // Загружаем данные при изменении файла или поиска
+  useEffect(() => {
+    if (selectedFile) {
+      fetchConversations(selectedFile.id, searchQuery);
+    }
+  }, [selectedFile, searchQuery, fetchConversations]);
 
   useEffect(() => {
     // Можно загрузить первый dataset по умолчанию

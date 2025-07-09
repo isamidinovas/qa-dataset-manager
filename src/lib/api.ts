@@ -120,6 +120,24 @@ export const apiService = {
     console.log("API Response:", response.data);
     return response.data;
   },
+
+  updateConversation: async (
+    conversationId: number,
+    updateData: { user: string; assistant: string }
+  ) => {
+    const response = await apiClient.put<Conversation>(
+      `/conversations/${conversationId}`,
+      updateData
+    );
+    console.log("Update API Response:", response.data);
+    return response.data;
+  },
+
+  deleteConversation: async (conversationId: number) => {
+    const response = await apiClient.delete(`/conversations/${conversationId}`);
+    console.log("Delete API Response:", response.data);
+    return response.data;
+  },
 };
 
 export default apiService;

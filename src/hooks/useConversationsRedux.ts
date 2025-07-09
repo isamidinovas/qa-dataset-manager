@@ -1,6 +1,11 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchConversationsByDataset } from "@/store/slices/conversationsSlice";
+import {
+  fetchConversationsByDataset,
+  updateConversation,
+  deleteConversation,
+} from "@/store/slices/conversationsSlice";
 import { Conversation } from "@/types/dialogue";
+import { useCallback, useEffect, useState } from "react";
 
 export const useConversationsRedux = () => {
   const dispatch = useAppDispatch();
@@ -10,29 +15,55 @@ export const useConversationsRedux = () => {
     error,
   } = useAppSelector((state) => state.conversations);
 
-  const fetchConversations = (datasetId: number, search?: string) => {
-    dispatch(fetchConversationsByDataset({ datasetId, search }));
-  };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const updateConversation = (
-    id: number,
-    updatedConversation: Partial<Conversation>
-  ) => {
-    // Здесь можно добавить логику обновления через Redux thunk
-    console.log("Update conversation:", id, updatedConversation);
-  };
+  // Debounce для поиска
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500); // 500ms задержка
 
-  const deleteConversation = (id: number) => {
-    // Здесь можно добавить логику удаления через Redux thunk
-    console.log("Delete conversation:", id);
-  };
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchConversations = useCallback(
+    (datasetId: number, search?: string) => {
+      dispatch(fetchConversationsByDataset({ datasetId, search }));
+    },
+    [dispatch]
+  );
+
+  const updateConversationHandler = useCallback(
+    (id: number, updatedConversation: Partial<Conversation>) => {
+      if (updatedConversation.user && updatedConversation.assistant) {
+        dispatch(
+          updateConversation({
+            id,
+            user: updatedConversation.user,
+            assistant: updatedConversation.assistant,
+          })
+        );
+      }
+    },
+    [dispatch]
+  );
+
+  const deleteConversationHandler = useCallback(
+    (id: number) => {
+      dispatch(deleteConversation({ id }));
+    },
+    [dispatch]
+  );
 
   return {
     conversations,
     loading,
     error,
+    searchQuery,
+    setSearchQuery,
     fetchConversations,
-    updateConversation,
-    deleteConversation,
+    updateConversation: updateConversationHandler,
+    deleteConversation: deleteConversationHandler,
   };
 };
