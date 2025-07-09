@@ -59,6 +59,37 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Redux Toolkit
+- Axios for API communication
+
+## API Configuration
+
+This frontend is configured to connect to a backend API running on port 5005. The API configuration is set up in `src/lib/api.ts`.
+
+### Environment Variables
+
+You can configure the API base URL using the environment variable:
+
+```
+VITE_API_BASE_URL=http://localhost:5005/api
+```
+
+If not set, it defaults to `http://localhost:5005/api`.
+
+### API Endpoints
+
+The application expects the following API endpoints:
+
+- `GET /api/files` - Get list of files
+- `GET /api/files/{fileId}/dialogues` - Get dialogues for a file
+- `POST /api/files/{fileId}/dialogues` - Create a new dialogue
+- `PUT /api/files/{fileId}/dialogues/{dialogueIndex}` - Update a dialogue
+- `DELETE /api/files/{fileId}/dialogues/{dialogueIndex}` - Delete a dialogue
+- `GET /api/datasets/{datasetId}/conversations` - Get conversations for a dataset
+
+### Testing API Connection
+
+The application includes an API test component that you can use to verify the connection to your backend. Look for the "Test API Connection" button in the header.
 
 ## How can I deploy this project?
 
