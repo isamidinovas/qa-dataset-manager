@@ -12,9 +12,8 @@ const ConversationsTest = () => {
     loading,
     error,
   } = useAppSelector((state) => state.conversations);
-
   const handleFetchConversations = () => {
-    dispatch(fetchConversationsByDataset(1)); // Тестовый dataset ID
+    dispatch(fetchConversationsByDataset({ datasetId: 1 })); // Тестовый dataset ID
   };
 
   useEffect(() => {
