@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface ConversationsTableProps {
   conversations: Conversation[];
@@ -104,32 +105,36 @@ const ConversationsTable = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Вопрос</TableHead>
-                    <TableHead>Ответ</TableHead>
-                    <TableHead>Действия</TableHead>
+                    <TableHead className="w-1/3">Вопрос</TableHead>
+                    <TableHead className="w-2/3">Ответ</TableHead>
+                    <TableHead className="w-auto">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentConversations.map((conv) => (
                     <TableRow key={conv.id}>
-                      <TableCell>
+                      <TableCell className="w-1/3">
                         {editingId === conv.id ? (
                           <Textarea
                             value={editUser}
                             onChange={(e) => setEditUser(e.target.value)}
                           />
                         ) : (
-                          <p>{conv.user}</p>
+                          <div>
+                            <MarkdownRenderer content={conv.user} />
+                          </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-2/3">
                         {editingId === conv.id ? (
                           <Textarea
                             value={editAssistant}
                             onChange={(e) => setEditAssistant(e.target.value)}
                           />
                         ) : (
-                          <p>{conv.assistant}</p>
+                          <div>
+                            <MarkdownRenderer content={conv.assistant} />
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -268,7 +273,9 @@ const ConversationsTable = ({
                           rows={3}
                         />
                       ) : (
-                        <p className="text-gray-900">{conv.user}</p>
+                        <div className="text-gray-900 break-words">
+                          <MarkdownRenderer content={conv.user} />
+                        </div>
                       )}
                     </div>
 
@@ -284,7 +291,9 @@ const ConversationsTable = ({
                           rows={3}
                         />
                       ) : (
-                        <p className="text-gray-900">{conv.assistant}</p>
+                        <div className="text-gray-900 break-words">
+                          <MarkdownRenderer content={conv.assistant} />
+                        </div>
                       )}
                     </div>
                   </div>
