@@ -33,6 +33,8 @@ interface ConversationsTableProps {
     updatedConversation: Partial<Conversation>
   ) => void;
   onDeleteConversation?: (id: number) => void;
+  selectedFileId?: number;
+  onRefresh?: () => void;
 }
 
 const ConversationsTable = ({
@@ -41,6 +43,8 @@ const ConversationsTable = ({
   onSearchChange,
   onUpdateConversation,
   onDeleteConversation,
+  selectedFileId,
+  onRefresh,
 }: ConversationsTableProps) => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editUser, setEditUser] = useState("");
@@ -378,6 +382,15 @@ const ConversationsTable = ({
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1"
+              >
+                ⏮ Первая
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="px-3 py-1"
@@ -423,6 +436,15 @@ const ConversationsTable = ({
               >
                 Вперед →
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1"
+              >
+                Последняя ⏭
+              </Button>
             </div>
           </div>
 
@@ -441,17 +463,24 @@ const ConversationsTable = ({
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="flex-1 max-w-[80px] text-xs px-1"
+                >
+                  ⏮
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="flex-1 max-w-[120px]"
+                  className="flex-1 max-w-[80px] text-xs px-1"
                 >
-                  ← Назад
+                  ←
                 </Button>
-
-                <span className="text-sm text-gray-600 px-4">
+                <span className="text-sm text-gray-600 px-2">
                   {currentPage} из {totalPages}
                 </span>
-
                 <Button
                   variant="outline"
                   size="sm"
@@ -459,9 +488,18 @@ const ConversationsTable = ({
                     setCurrentPage(Math.min(totalPages, currentPage + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className="flex-1 max-w-[120px]"
+                  className="flex-1 max-w-[80px] text-xs px-1"
                 >
-                  Вперед →
+                  →
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="flex-1 max-w-[80px] text-xs px-1"
+                >
+                  ⏭
                 </Button>
               </div>
 

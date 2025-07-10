@@ -165,6 +165,10 @@ const Index = () => {
               onSearchChange={setSearchQuery}
               onUpdateConversation={handleUpdateConversation}
               onDeleteConversation={handleDeleteConversation}
+              selectedFileId={selectedFile?.id}
+              onRefresh={() =>
+                selectedFile && fetchConversations(selectedFile.id, searchQuery)
+              }
             />
           ) : (
             <Card className="h-full flex items-center justify-center">
