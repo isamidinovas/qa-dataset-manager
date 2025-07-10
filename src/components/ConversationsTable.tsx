@@ -45,6 +45,12 @@ const ConversationsTable = ({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editUser, setEditUser] = useState("");
   const [editAssistant, setEditAssistant] = useState("");
+  // refs для textarea
+  // Удалить userTextareaRef, assistantTextareaRef
+
+  // Автоматическая высота textarea при открытии и изменении
+  // Удалить useEffect для авторазмера
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -115,10 +121,18 @@ const ConversationsTable = ({
                     <TableRow key={conv.id}>
                       <TableCell className="w-1/3">
                         {editingId === conv.id ? (
-                          <Textarea
-                            value={editUser}
-                            onChange={(e) => setEditUser(e.target.value)}
-                          />
+                          <div className="border rounded-md p-2 bg-white">
+                            <textarea
+                              value={editUser}
+                              onChange={(e) => setEditUser(e.target.value)}
+                              className="w-full border-none outline-none resize-y bg-transparent"
+                              style={{
+                                minHeight: "120px",
+                                maxHeight: "400px",
+                                overflow: "auto",
+                              }}
+                            />
+                          </div>
                         ) : (
                           <div>
                             <MarkdownRenderer content={conv.user} />
@@ -127,10 +141,18 @@ const ConversationsTable = ({
                       </TableCell>
                       <TableCell className="w-2/3">
                         {editingId === conv.id ? (
-                          <Textarea
-                            value={editAssistant}
-                            onChange={(e) => setEditAssistant(e.target.value)}
-                          />
+                          <div className="border rounded-md p-2 bg-white">
+                            <textarea
+                              value={editAssistant}
+                              onChange={(e) => setEditAssistant(e.target.value)}
+                              className="w-full border-none outline-none resize-y bg-transparent"
+                              style={{
+                                minHeight: "120px",
+                                maxHeight: "400px",
+                                overflow: "auto",
+                              }}
+                            />
+                          </div>
                         ) : (
                           <div>
                             <MarkdownRenderer content={conv.assistant} />
@@ -266,12 +288,18 @@ const ConversationsTable = ({
                         )}
                       </div>
                       {editingId === conv.id ? (
-                        <Textarea
-                          value={editUser}
-                          onChange={(e) => setEditUser(e.target.value)}
-                          className="w-full"
-                          rows={3}
-                        />
+                        <div className="border rounded-md p-2 bg-white">
+                          <textarea
+                            value={editUser}
+                            onChange={(e) => setEditUser(e.target.value)}
+                            className="w-full border-none outline-none resize-y bg-transparent"
+                            style={{
+                              minHeight: "120px",
+                              maxHeight: "400px",
+                              overflow: "auto",
+                            }}
+                          />
+                        </div>
                       ) : (
                         <div className="text-gray-900 break-words">
                           <MarkdownRenderer content={conv.user} />
@@ -284,12 +312,18 @@ const ConversationsTable = ({
                         Ответ:
                       </span>
                       {editingId === conv.id ? (
-                        <Textarea
-                          value={editAssistant}
-                          onChange={(e) => setEditAssistant(e.target.value)}
-                          className="w-full"
-                          rows={3}
-                        />
+                        <div className="border rounded-md p-2 bg-white">
+                          <textarea
+                            value={editAssistant}
+                            onChange={(e) => setEditAssistant(e.target.value)}
+                            className="w-full border-none outline-none resize-y bg-transparent"
+                            style={{
+                              minHeight: "120px",
+                              maxHeight: "400px",
+                              overflow: "auto",
+                            }}
+                          />
+                        </div>
                       ) : (
                         <div className="text-gray-900 break-words">
                           <MarkdownRenderer content={conv.assistant} />
