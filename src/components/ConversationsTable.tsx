@@ -12,6 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit, Save, Trash2 } from "lucide-react";
 import { Conversation } from "@/types/dialogue";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ConversationsTableProps {
   conversations: Conversation[];
@@ -36,6 +46,9 @@ const ConversationsTable = ({
   const [editAssistant, setEditAssistant] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] =
+    useState<Conversation | null>(null);
 
   const totalPages = Math.ceil(conversations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -63,8 +76,22 @@ const ConversationsTable = ({
     setEditAssistant("");
   };
 
-  const handleDelete = (id: number) => {
-    onDeleteConversation?.(id);
+  const handleDeleteClick = (conversation: Conversation) => {
+    setConversationToDelete(conversation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (conversationToDelete) {
+      onDeleteConversation?.(conversationToDelete.id);
+      setDeleteDialogOpen(false);
+      setConversationToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setConversationToDelete(null);
   };
   console.log("conversations:", conversations);
   return (
@@ -73,167 +100,223 @@ const ConversationsTable = ({
         <div className="h-full overflow-auto">
           {/* Десктопная версия */}
           <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Вопрос</TableHead>
-                  <TableHead>Ответ</TableHead>
-                  <TableHead>Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentConversations.map((conv) => (
-                  <TableRow key={conv.id}>
-                    <TableCell>
-                      {editingId === conv.id ? (
-                        <Textarea
-                          value={editUser}
-                          onChange={(e) => setEditUser(e.target.value)}
-                        />
-                      ) : (
-                        <p>{conv.user}</p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === conv.id ? (
-                        <Textarea
-                          value={editAssistant}
-                          onChange={(e) => setEditAssistant(e.target.value)}
-                        />
-                      ) : (
-                        <p>{conv.assistant}</p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === conv.id ? (
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={() => handleSave(conv.id)}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Save className="h-4 w-4 mr-1" />
-                            Сохранить
-                          </Button>
-                          <Button
-                            onClick={handleCancel}
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-300 hover:bg-gray-50"
-                          >
-                            Отмена
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={() => handleEdit(conv)}
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                          </Button>
-                          <Button
-                            onClick={() => handleDelete(conv.id)}
-                            size="sm"
-                            variant="outline"
-                            className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
+            {currentConversations.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Вопрос</TableHead>
+                    <TableHead>Ответ</TableHead>
+                    <TableHead>Действия</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {currentConversations.map((conv) => (
+                    <TableRow key={conv.id}>
+                      <TableCell>
+                        {editingId === conv.id ? (
+                          <Textarea
+                            value={editUser}
+                            onChange={(e) => setEditUser(e.target.value)}
+                          />
+                        ) : (
+                          <p>{conv.user}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === conv.id ? (
+                          <Textarea
+                            value={editAssistant}
+                            onChange={(e) => setEditAssistant(e.target.value)}
+                          />
+                        ) : (
+                          <p>{conv.assistant}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === conv.id ? (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => handleSave(conv.id)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Save className="h-4 w-4 mr-1" />
+                              Сохранить
+                            </Button>
+                            <Button
+                              onClick={handleCancel}
+                              size="sm"
+                              variant="outline"
+                              className="border-gray-300 hover:bg-gray-50"
+                            >
+                              Отмена
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => handleEdit(conv)}
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteClick(conv)}
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="text-gray-400 mb-4">
+                  <svg
+                    className="w-16 h-16 mx-auto"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchQuery ? "Ничего не найдено" : "Нет записей"}
+                </h3>
+                <p className="text-gray-500 max-w-md">
+                  {searchQuery
+                    ? `По запросу "${searchQuery}" ничего не найдено. Попробуйте изменить поисковый запрос.`
+                    : "Пока нет добавленных записей. Добавьте первую запись, чтобы начать работу."}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Мобильная версия */}
           <div className="md:hidden">
-            <div className="space-y-4 p-4">
-              {currentConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  className="bg-white rounded-lg border p-4 space-y-3"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-500">
-                        Вопрос:
-                      </span>
+            {currentConversations.length > 0 ? (
+              <div className="space-y-4 p-4">
+                {currentConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="bg-white rounded-lg border p-4 space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-500">
+                          Вопрос:
+                        </span>
+                        {editingId === conv.id ? (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => handleSave(conv.id)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Save className="h-4 w-4 mr-1" />
+                              Сохранить
+                            </Button>
+                            <Button
+                              onClick={handleCancel}
+                              size="sm"
+                              variant="outline"
+                              className="border-gray-300 hover:bg-gray-50"
+                            >
+                              Отмена
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => handleEdit(conv)}
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteClick(conv)}
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                       {editingId === conv.id ? (
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={() => handleSave(conv.id)}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Save className="h-4 w-4 mr-1" />
-                            Сохранить
-                          </Button>
-                          <Button
-                            onClick={handleCancel}
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-300 hover:bg-gray-50"
-                          >
-                            Отмена
-                          </Button>
-                        </div>
+                        <Textarea
+                          value={editUser}
+                          onChange={(e) => setEditUser(e.target.value)}
+                          className="w-full"
+                          rows={3}
+                        />
                       ) : (
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={() => handleEdit(conv)}
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            onClick={() => handleDelete(conv.id)}
-                            size="sm"
-                            variant="outline"
-                            className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <p className="text-gray-900">{conv.user}</p>
                       )}
                     </div>
-                    {editingId === conv.id ? (
-                      <Textarea
-                        value={editUser}
-                        onChange={(e) => setEditUser(e.target.value)}
-                        className="w-full"
-                        rows={3}
-                      />
-                    ) : (
-                      <p className="text-gray-900">{conv.user}</p>
-                    )}
-                  </div>
 
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 block mb-2">
-                      Ответ:
-                    </span>
-                    {editingId === conv.id ? (
-                      <Textarea
-                        value={editAssistant}
-                        onChange={(e) => setEditAssistant(e.target.value)}
-                        className="w-full"
-                        rows={3}
-                      />
-                    ) : (
-                      <p className="text-gray-900">{conv.assistant}</p>
-                    )}
+                    <div>
+                      <span className="text-sm font-medium text-gray-500 block mb-2">
+                        Ответ:
+                      </span>
+                      {editingId === conv.id ? (
+                        <Textarea
+                          value={editAssistant}
+                          onChange={(e) => setEditAssistant(e.target.value)}
+                          className="w-full"
+                          rows={3}
+                        />
+                      ) : (
+                        <p className="text-gray-900">{conv.assistant}</p>
+                      )}
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="text-gray-400 mb-4">
+                  <svg
+                    className="w-12 h-12 mx-auto"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
                 </div>
-              ))}
-            </div>
+                <h3 className="text-base font-medium text-gray-900 mb-2">
+                  {searchQuery ? "Ничего не найдено" : "Нет записей"}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {searchQuery
+                    ? `По запросу "${searchQuery}" ничего не найдено. Попробуйте изменить поисковый запрос.`
+                    : "Пока нет добавленных записей. Добавьте первую запись, чтобы начать работу."}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
@@ -364,6 +447,30 @@ const ConversationsTable = ({
           </div>
         </div>
       )}
+
+      {/* Модальное окно подтверждения удаления */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтверждение удаления</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить эту запись? Это действие нельзя
+              отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
