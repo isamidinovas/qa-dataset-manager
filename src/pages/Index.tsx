@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import DataSidebar from "@/components/DialogueSidebar";
-import DialogueTable from "@/components/DialogueTable";
 import ConversationsTable from "@/components/ConversationsTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Menu, X, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchConversationsByDataset } from "@/store/slices/conversationsSlice";
+
 import { useConversationsRedux } from "@/hooks/useConversationsRedux";
 
 // dialogue.ts
