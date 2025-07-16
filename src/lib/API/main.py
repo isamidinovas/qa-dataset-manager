@@ -1,5 +1,5 @@
-import logging
 from fastapi import FastAPI, Depends, HTTPException, Query
+import langid
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +8,9 @@ from database import SessionLocal
 from models import Conversation
 from schemas import ConversationOut, ConversationUpdate  # pydantic-схема для ответа
 import re
-import json
+from functools import lru_cache
+from typing import Optional
+from fastapi import Query
 # from langdetect import detect ,LangDetectException
 # import fasttext
 app = FastAPI()
@@ -50,7 +52,7 @@ def get_conversations(
     return query.all()
 
 
-
+# FASTTEXT library
 # model = fasttext.load_model("C:/Users/user/Downloads/lid.176.bin")
 
 # def is_russian(text: str, threshold=0.9) -> bool:
@@ -87,14 +89,14 @@ def get_conversations(
 #     return {"message": f"Сохранено {len(filtered)} conversations с русским языком в {output_path}"}
 
 
-# # APPROVED
-import langid
+# # APPROVED langid library
+# import langid
 
-def is_russian(text: str) -> bool:
-    try:
-        return langid.classify(text)[0] == 'ru'
-    except:
-        return False
+# def is_russian(text: str) -> bool:
+#     try:
+#         return langid.classify(text)[0] == 'ru'
+#     except:
+#         return False
 
 # @app.get("/export-conversations-with-russian/")
 # def export_conversations_with_russian(
@@ -119,9 +121,58 @@ def is_russian(text: str) -> bool:
 
 #     return {"message": f"Сохранено {len(filtered)} conversations с русским языком"}
 
+# APPROVEDDD
+# @app.get("/export-conversations-with-russian/")
+# def export_conversations_with_russian(
+#     dataset_id: int = Query(...),
+#     db: Session = Depends(get_db)
+# ):
+#     conversations = db.query(Conversation).filter(Conversation.dataset_id == dataset_id).all()
+
+#     filtered = []
+#     for conv in conversations:
+#         combined_text = f"{conv.user or ''} {conv.assistant or ''}"
+#         if is_russian(combined_text):
+#             filtered.append({
+#                 "id": conv.id,
+#                 "user": conv.user,
+#                 "assistant": conv.assistant,
+#                 "dataset_id": conv.dataset_id
+#             })
+
+#     return {
+#         "total": len(filtered),
+#         "dataset_id": dataset_id,
+#         "conversations": filtered
+#     }
+
+
+
+def has_cyrillic(text: str) -> bool:
+    """Quick check for Cyrillic characters"""
+    return bool(re.search(r'[а-яё]', text.lower()))
+
+@lru_cache(maxsize=5000)
+def is_russian_cached(text: str) -> bool:
+    """Cached language detection"""
+    try:
+        return langid.classify(text.strip())[0] == 'ru'
+    except:
+        return False
+
+def is_russian(text: str) -> bool:
+    """Optimized Russian detection"""
+    if not has_cyrillic(text):
+        return False
+    
+    return is_russian_cached(text)
+
+
+
 @app.get("/export-conversations-with-russian/")
 def export_conversations_with_russian(
     dataset_id: int = Query(...),
+    search: Optional[str] = Query(None, description="Текст для поиска в user и assistant"),
     db: Session = Depends(get_db)
 ):
     conversations = db.query(Conversation).filter(Conversation.dataset_id == dataset_id).all()
@@ -129,13 +180,23 @@ def export_conversations_with_russian(
     filtered = []
     for conv in conversations:
         combined_text = f"{conv.user or ''} {conv.assistant or ''}"
-        if is_russian(combined_text):
-            filtered.append({
-                "id": conv.id,
-                "user": conv.user,
-                "assistant": conv.assistant,
-                "dataset_id": conv.dataset_id
-            })
+
+        if is_russian(combined_text):  
+            if search:
+                if search.lower() in (conv.user or "").lower() or search.lower() in (conv.assistant or "").lower():
+                    filtered.append({
+                        "id": conv.id,
+                        "user": conv.user,
+                        "assistant": conv.assistant,
+                        "dataset_id": conv.dataset_id
+                    })
+            else:
+                filtered.append({
+                    "id": conv.id,
+                    "user": conv.user,
+                    "assistant": conv.assistant,
+                    "dataset_id": conv.dataset_id
+                })
 
     return {
         "total": len(filtered),

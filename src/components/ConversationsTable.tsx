@@ -112,18 +112,27 @@ const ConversationsTable = ({
           {/* Десктопная версия */}
           <div className="hidden md:block">
             {currentConversations.length > 0 ? (
-              <Table>
+              <Table
+                className="table-fixed w-full"
+                style={{ tableLayout: "fixed" }}
+              >
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/3">Вопрос</TableHead>
-                    <TableHead className="w-2/3">Ответ</TableHead>
-                    <TableHead className="w-auto">Действия</TableHead>
+                    <TableHead className="w-[35%] min-w-[300px] max-w-[400px]">
+                      Вопрос
+                    </TableHead>
+                    <TableHead className="w-[55%] min-w-[400px]">
+                      Ответ
+                    </TableHead>
+                    <TableHead className="w-[10%] min-w-[150px] max-w-[150px]">
+                      Действия
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentConversations.map((conv) => (
                     <TableRow key={conv.id}>
-                      <TableCell className="w-1/3">
+                      <TableCell className="w-[35%] min-w-[300px] max-w-[400px]">
                         {editingId === conv.id ? (
                           <div className="border rounded-md p-2 bg-white">
                             <textarea
@@ -138,12 +147,12 @@ const ConversationsTable = ({
                             />
                           </div>
                         ) : (
-                          <div>
+                          <div className="break-words overflow-hidden">
                             <MarkdownRenderer content={conv.user} />
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="w-2/3">
+                      <TableCell className="w-[50%] min-w-[400px]">
                         {editingId === conv.id ? (
                           <div className="border rounded-md p-2 bg-white">
                             <textarea
@@ -158,48 +167,47 @@ const ConversationsTable = ({
                             />
                           </div>
                         ) : (
-                          <div>
+                          <div className="break-words overflow-hidden">
                             <MarkdownRenderer content={conv.assistant} />
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-[15%] min-w-[150px] max-w-[150px]">
                         {editingId === conv.id ? (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1">
                             <Button
                               onClick={() => handleSave(conv.id)}
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              className="bg-green-600 hover:bg-green-700 text-white w-[50px]"
                             >
-                              <Save className="h-4 w-4 mr-1" />
-                              Сохранить
+                              <Save className="h-4 w-4" />
                             </Button>
                             <Button
                               onClick={handleCancel}
                               size="sm"
                               variant="outline"
-                              className="border-gray-300 hover:bg-gray-50"
+                              className="border-gray-300 hover:bg-gray-50 w-[50px]"
                             >
                               Отмена
                             </Button>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1">
                             <Button
                               onClick={() => handleEdit(conv)}
                               size="sm"
                               variant="outline"
-                              className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                              className="border-blue-300 hover:bg-blue-50 text-blue-600 hover:text-blue-700 w-[50px]"
                             >
-                              <Edit className="h-4 w-4 mr-1" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               onClick={() => handleDeleteClick(conv)}
                               size="sm"
                               variant="outline"
-                              className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                              className="border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700 w-[50px]"
                             >
-                              <Trash2 className="h-4 w-4 mr-1" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         )}

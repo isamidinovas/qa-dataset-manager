@@ -7,10 +7,14 @@ import { Loader2, Menu, X, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 import { useConversationsRedux } from "@/hooks/useConversationsRedux";
+import {
+  fetchConversationsByDataset,
+  fetchFilteredConversationsByDataset,
+} from "@/store/slices/conversationsSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-// dialogue.ts
 export interface DialogueFile {
-  id: number; // ← был string, стал number
+  id: number; //
   name: string;
 }
 
@@ -19,6 +23,7 @@ const Index = () => {
     conversations,
     loading,
     error,
+
     searchQuery,
     setSearchQuery,
     fetchConversations,
@@ -35,30 +40,64 @@ const Index = () => {
     { id: 5, name: "Dataset 5" },
     { id: 6, name: "Dataset 6" },
     { id: 7, name: "Dataset 7" },
+    { id: 101, name: "Filtered Dataset 1" },
+    { id: 102, name: "Filtered Dataset 2" },
+    { id: 103, name: "Filtered Dataset 3" },
+    { id: 104, name: "Filtered Dataset 4" }, // 100+id — для уникальности
+    { id: 105, name: "Filtered Dataset 5" },
+    { id: 106, name: "Filtered Dataset 6" },
+    { id: 107, name: "Filtered Dataset 7" },
   ];
 
   const [selectedFile, setSelectedFile] = useState<DialogueFile | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { items, filteredItems } = useAppSelector(
+    (state) => state.conversations
+  );
+  const dispatch = useAppDispatch();
+
+  const fetchDataForFile = (file: DialogueFile) => {
+    if (file.name.startsWith("Filtered")) {
+      dispatch(
+        fetchFilteredConversationsByDataset({
+          dataset_id: file.id - 100,
+          search: searchQuery,
+        })
+      );
+    } else {
+      dispatch(
+        fetchConversationsByDataset({ datasetId: file.id, search: searchQuery })
+      );
+    }
+  };
 
   const handleFileSelect = (file: DialogueFile) => {
     setSelectedFile(file);
     setIsMobileSidebarOpen(false);
-    fetchConversations(file.id, searchQuery);
+    fetchDataForFile(file);
   };
 
-  // Загружаем данные при изменении файла или поиска
   useEffect(() => {
     if (selectedFile) {
-      fetchConversations(selectedFile.id, searchQuery);
+      if (selectedFile.name.startsWith("Filtered")) {
+        dispatch(
+          fetchFilteredConversationsByDataset({
+            dataset_id: selectedFile.id - 100,
+            search: searchQuery,
+          })
+        );
+      } else {
+        fetchConversations(selectedFile.id, searchQuery);
+      }
     }
-  }, [selectedFile, searchQuery, fetchConversations]);
+  }, [selectedFile, searchQuery, fetchConversations, dispatch]);
 
   useEffect(() => {
-    // Можно загрузить первый dataset по умолчанию
     if (!selectedFile && files.length > 0) {
-      handleFileSelect(files[0]);
+      setSelectedFile(files[0]);
+      setIsMobileSidebarOpen(false);
     }
-  }, [files]);
+  }, [files, selectedFile]);
 
   const handleUpdateConversation = (
     id: number,
@@ -70,7 +109,6 @@ const Index = () => {
   const handleDeleteConversation = (id: number) => {
     deleteConversation(id);
   };
-  console.log("conv:", selectedFile);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -158,7 +196,12 @@ const Index = () => {
             </Card>
           ) : selectedFile ? (
             <ConversationsTable
-              conversations={conversations}
+              // conversations={conversations}
+              conversations={
+                selectedFile?.name.startsWith("Filtered")
+                  ? filteredItems
+                  : items
+              }
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onUpdateConversation={handleUpdateConversation}

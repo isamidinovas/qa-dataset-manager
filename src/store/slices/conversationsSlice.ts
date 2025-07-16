@@ -6,12 +6,14 @@ import axios from "axios";
 
 interface ConversationsState {
   items: Conversation[];
+  filteredItems: Conversation[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ConversationsState = {
   items: [],
+  filteredItems: [],
   loading: false,
   error: null,
 };
@@ -34,7 +36,28 @@ export const fetchConversationsByDataset = createAsyncThunk<
     return thunkAPI.rejectWithValue(errorMessage);
   }
 });
+// без search
+// export const fetchFilteredConversationsByDataset = createAsyncThunk(
+//   "conversations/fetchFilteredByDataset",
+//   async (dataset_id: number) => {
+//     const response = await axios.get(
+//       `http://localhost:5005/export-conversations-with-russian/?dataset_id=${dataset_id}`
+//     );
+//     return response.data.conversations; // возвращаем массив conversations
+//   }
+// );
+export const fetchFilteredConversationsByDataset = createAsyncThunk(
+  "conversations/fetchFilteredByDataset",
+  async ({ dataset_id, search }: { dataset_id: number; search?: string }) => {
+    const params = new URLSearchParams({ dataset_id: String(dataset_id) });
+    if (search) params.append("search", search);
 
+    const response = await axios.get(
+      `http://localhost:5005/export-conversations-with-russian/?${params.toString()}`
+    );
+    return response.data.conversations;
+  }
+);
 export const updateConversation = createAsyncThunk<
   Conversation,
   { id: number; user: string; assistant: string }
@@ -85,6 +108,26 @@ const conversationsSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? "Ошибка загрузки";
       })
+
+      .addCase(fetchFilteredConversationsByDataset.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(
+        fetchFilteredConversationsByDataset.fulfilled,
+        (state, action) => {
+          state.filteredItems = action.payload; // ✅ сохраняем фильтрованные данные
+          state.loading = false;
+        }
+      )
+      .addCase(
+        fetchFilteredConversationsByDataset.rejected,
+        (state, action) => {
+          state.loading = false;
+          state.error =
+            action.error.message || "Ошибка при загрузке фильтрованных данных";
+        }
+      )
       .addCase(updateConversation.pending, (state) => {
         state.loading = true;
         state.error = null;

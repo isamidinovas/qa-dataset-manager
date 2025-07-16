@@ -73,6 +73,9 @@ export const fetchDialogues = createAsyncThunk(
 ### 3. CRUD операции
 
 ```typescript
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
 // Обновление диалога
 export const updateDialogue = createAsyncThunk(
   "dialogue/updateDialogue",
