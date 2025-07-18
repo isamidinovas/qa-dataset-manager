@@ -7,6 +7,7 @@ import { Provider } from "react-redux";
 import { store } from "@/store";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Dictionary from "./pages/Dictionary";
 
 const queryClient = new QueryClient();
 
@@ -19,7 +20,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/dict" element={<Dictionary />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

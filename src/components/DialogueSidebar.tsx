@@ -24,7 +24,7 @@ const DataSidebar = ({
   };
 
   const getTitle = () => {
-    return viewMode === "conversations" ? "Conversations" : "Диалоги";
+    return viewMode === "conversations" ? "Словарь" : "Диалоги";
   };
 
   const getIcon = () => {

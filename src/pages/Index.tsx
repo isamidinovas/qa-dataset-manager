@@ -12,6 +12,7 @@ import {
   fetchFilteredConversationsByDataset,
 } from "@/store/slices/conversationsSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { NavLink } from "react-router-dom";
 
 export interface DialogueFile {
   id: number; //
@@ -147,6 +148,9 @@ const Index = () => {
           Просмотр данных
         </h1>
         <div className="flex items-center gap-4">
+          <NavLink to="/dict" className="text-black underline font-bold">
+            Юдахин
+          </NavLink>
           <div className="relative w-80 hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input

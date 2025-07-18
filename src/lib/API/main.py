@@ -11,6 +11,7 @@ import re
 from functools import lru_cache
 from typing import Optional
 from fastapi import Query
+import sqlite3
 # from langdetect import detect ,LangDetectException
 # import fasttext
 app = FastAPI()
@@ -253,3 +254,149 @@ def delete_conversation(
     db.delete(conversation)
     db.commit()
     return {"detail": "Conversation deleted successfully"}
+
+
+DB_PATH = r'C:\Users\user\Downloads\dictionary3.sqlite'
+TABLE_NAME = "dictionary_table"  # your actual table name
+
+# def get_unique_records(source: str, other_source: str):
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
+
+#     # Получаем все слова для обоих источников
+#     cursor.execute(f"SELECT word, source, definition, examples FROM {TABLE_NAME} WHERE source = ?", (source,))
+#     source_rows = cursor.fetchall()
+
+#     cursor.execute(f"SELECT word FROM {TABLE_NAME} WHERE source = ?", (other_source,))
+#     other_words = {row[0].strip().lower() for row in cursor.fetchall() if row[0]}  # множество для быстрого поиска
+
+#     conn.close()
+
+#     # Фильтруем уникальные слова
+#     return [
+#         {
+#             "word": row[0],
+#             "source": row[1],
+#             "definition": row[2],
+#             "examples": row[3]
+#         }
+#         for row in source_rows
+#         if row[0] and row[0].strip().lower() not in other_words
+#     ]
+
+
+# CORRECT
+def get_unique_records(source: str, other_source: str, search: Optional[str] = None, limit: int = 50, offset: int = 0):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Получаем все слова из каждого источника с учётом поиска
+    if search:
+        cursor.execute(
+            f"SELECT word, source, definition, examples FROM {TABLE_NAME} WHERE source = ? AND word = ?",
+            (source, search)
+        )
+    else:
+        cursor.execute(
+            f"SELECT word, source, definition, examples FROM {TABLE_NAME} WHERE source = ?",
+            (source,)
+        )
+    source_rows = cursor.fetchall()
+
+    cursor.execute(f"SELECT word FROM {TABLE_NAME} WHERE source = ?", (other_source,))
+    other_words = {row[0].strip().lower() for row in cursor.fetchall() if row[0]}
+
+    conn.close()
+
+    # Фильтруем уникальные слова
+    unique_rows = [
+        {
+            "word": row[0],
+            "source": row[1],
+            "definition": row[2],
+            "examples": row[3]
+        }
+        for row in source_rows
+        if row[0] and row[0].strip().lower() not in other_words
+    ]
+
+    total = len(unique_rows)
+    paginated = unique_rows[offset:offset+limit]
+    return paginated, total
+
+
+
+
+@app.get("/unique-words/")
+def unique_words(
+    search: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0)
+):
+    oruscha_only, oruscha_total = get_unique_records("file2", "file1", search, limit, offset)
+    kyrgyzcha_only, kyrgyzcha_total = get_unique_records("file1", "file2", search, limit, offset)
+    return {
+        "oruscha_kyrgyzcha_only": oruscha_only,
+        "oruscha_total": oruscha_total,
+        "kyrgyzcha_oruscha_only": kyrgyzcha_only,
+        "kyrgyzcha_total": kyrgyzcha_total
+    }
+
+
+
+
+
+
+
+# def get_unique_records(source: str, other_source: str, search: str = ""):
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
+
+#     # Формируем условие для поиска
+#     search_param = f"%{search.lower()}%"
+
+#     query = f"""
+#     SELECT word, source, definition, examples
+#     FROM {TABLE_NAME}
+#     WHERE source = ?
+#     AND lower(trim(word)) NOT IN (
+#         SELECT lower(trim(word)) FROM {TABLE_NAME} WHERE source = ?
+#     )
+#     """
+
+#     # Если есть поиск, добавляем условия LIKE для word, definition, examples
+#     if search:
+#         query += """
+#         AND (
+#             lower(word) LIKE ?
+#             OR lower(definition) LIKE ?
+#             OR lower(examples) LIKE ?
+#         )
+#         """
+
+#         cursor.execute(query, (source, other_source, search_param, search_param, search_param))
+#     else:
+#         cursor.execute(query, (source, other_source))
+
+#     results = [
+#         {
+#             "word": row[0],
+#             "source": row[1],
+#             "definition": row[2],
+#             "examples": row[3],
+#         }
+#         for row in cursor.fetchall()
+#     ]
+
+#     conn.close()
+#     return results
+
+# @app.get("/unique-words/")
+# def unique_words(search: str = Query("", description="Поисковый запрос")):
+#     # Вызов get_unique_records с передачей search
+#     oruscha_only = get_unique_records("file2", "file1", search)
+#     kyrgyzcha_only = get_unique_records("file1", "file2", search)
+#     return {
+#         "oruscha_kyrgyzcha_only": oruscha_only,
+#         "kyrgyzcha_oruscha_only": kyrgyzcha_only
+#     }
