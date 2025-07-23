@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+import shutil
+import tempfile
+from fastapi import FastAPI, Depends, File, HTTPException, Query, UploadFile
 import langid
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -12,6 +14,12 @@ from functools import lru_cache
 from typing import Optional
 from fastapi import Query
 import sqlite3
+from fastapi.responses import FileResponse
+import re, langid, pandas as pd
+import os
+import io
+from fastapi.responses import StreamingResponse
+from datetime import datetime
 # from langdetect import detect ,LangDetectException
 # import fasttext
 app = FastAPI()
@@ -37,118 +45,24 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5005)
 
-@app.get("/conversations/", response_model=List[ConversationOut])
-def get_conversations(
-    dataset_id: int = Query(..., description="ID набора данных для фильтрации"),
-    search: Optional[str] = Query(None, description="Текст для поиска в user и assistant"),
-    db: Session = Depends(get_db)
-):
-    query = db.query(Conversation).filter(Conversation.dataset_id == dataset_id)
-    if search:
-        like_pattern = f"%{search}%"
-        query = query.filter(
-            (Conversation.user.ilike(like_pattern)) |
-            (Conversation.assistant.ilike(like_pattern))
-        )
-    return query.all()
-
-
-# FASTTEXT library
-# model = fasttext.load_model("C:/Users/user/Downloads/lid.176.bin")
-
-# def is_russian(text: str, threshold=0.9) -> bool:
-#     try:
-#         labels, probs = model.predict(text.strip().replace("\n", " "))
-#         # labels и probs — списки, берем первый label и confidence
-#         return labels[0] == '__label__ru' and probs[0] >= threshold
-#     except Exception as e:
-#         logging.error(f"Ошибка определения языка: {e}")
-#         return False
-
-# @app.get("/export-conversations-with-russian/")
-# def export_conversations_with_russian(
-#     dataset_id: int = Query(...),
+# @app.get("/conversations/", response_model=List[ConversationOut])
+# def get_conversations(
+#     dataset_id: int = Query(..., description="ID набора данных для фильтрации"),
+#     search: Optional[str] = Query(None, description="Текст для поиска в user и assistant"),
 #     db: Session = Depends(get_db)
 # ):
-#     conversations = db.query(Conversation).filter(Conversation.dataset_id == dataset_id).all()
-
-#     filtered = []
-#     for conv in conversations:
-#         combined_text = f"{conv.user or ''} {conv.assistant or ''}"
-#         if is_russian(combined_text):
-#             filtered.append({
-#                 "id": conv.id,
-#                 "user": conv.user,
-#                 "assistant": conv.assistant,
-#                 "dataset_id": conv.dataset_id
-#             })
-
-#     output_path = "conversations_with_russian.json"
-#     with open(output_path, "w", encoding="utf-8") as f:
-#         json.dump(filtered, f, ensure_ascii=False, indent=4)
-
-#     return {"message": f"Сохранено {len(filtered)} conversations с русским языком в {output_path}"}
+#     query = db.query(Conversation).filter(Conversation.dataset_id == dataset_id)
+#     if search:
+#         like_pattern = f"%{search}%"
+#         query = query.filter(
+#             (Conversation.user.ilike(like_pattern)) |
+#             (Conversation.assistant.ilike(like_pattern))
+#         )
+#     return query.all()
 
 
-# # APPROVED langid library
-# import langid
-
-# def is_russian(text: str) -> bool:
-#     try:
-#         return langid.classify(text)[0] == 'ru'
-#     except:
-#         return False
-
-# @app.get("/export-conversations-with-russian/")
-# def export_conversations_with_russian(
-#     dataset_id: int = Query(...),
-#     db: Session = Depends(get_db)
-# ):
-#     conversations = db.query(Conversation).filter(Conversation.dataset_id == dataset_id).all()
-
-#     filtered = []
-#     for conv in conversations:
-#         combined_text = f"{conv.user or ''} {conv.assistant or ''}"
-#         if is_russian(combined_text):
-#             filtered.append({
-#                 "id": conv.id,
-#                 "user": conv.user,
-#                 "assistant": conv.assistant,
-#                 "dataset_id": conv.dataset_id
-#             })
-
-#     with open("conversations_with_russian1.json", "w", encoding="utf-8") as f:
-#         json.dump(filtered, f, ensure_ascii=False, indent=4)
-
-#     return {"message": f"Сохранено {len(filtered)} conversations с русским языком"}
-
-# APPROVEDDD
-# @app.get("/export-conversations-with-russian/")
-# def export_conversations_with_russian(
-#     dataset_id: int = Query(...),
-#     db: Session = Depends(get_db)
-# ):
-#     conversations = db.query(Conversation).filter(Conversation.dataset_id == dataset_id).all()
-
-#     filtered = []
-#     for conv in conversations:
-#         combined_text = f"{conv.user or ''} {conv.assistant or ''}"
-#         if is_russian(combined_text):
-#             filtered.append({
-#                 "id": conv.id,
-#                 "user": conv.user,
-#                 "assistant": conv.assistant,
-#                 "dataset_id": conv.dataset_id
-#             })
-
-#     return {
-#         "total": len(filtered),
-#         "dataset_id": dataset_id,
-#         "conversations": filtered
-#     }
-
-
-
+# APPROVED
+# --- Проверка на русский (из вашего кода) ---
 def has_cyrillic(text: str) -> bool:
     """Quick check for Cyrillic characters"""
     return bool(re.search(r'[а-яё]', text.lower()))
@@ -165,8 +79,139 @@ def is_russian(text: str) -> bool:
     """Optimized Russian detection"""
     if not has_cyrillic(text):
         return False
-    
     return is_russian_cached(text)
+
+# --- Основной API ---
+@app.get("/conversations/", response_model=List[ConversationOut])
+def get_conversations(
+    dataset_id: int = Query(..., description="ID набора данных для фильтрации"),
+    search: Optional[str] = Query(None, description="Текст для поиска в user и assistant"),
+    exclude_russian: bool = Query(False, description="Исключить русскоязычные диалоги"),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Conversation).filter(Conversation.dataset_id == dataset_id)
+
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            (Conversation.user.ilike(like_pattern)) |
+            (Conversation.assistant.ilike(like_pattern))
+        )
+
+    conversations = query.all()
+
+    # --- Фильтрация на Python уровне ---
+    if exclude_russian:
+        conversations = [
+            conv for conv in conversations
+            if not is_russian(f"{conv.user or ''} {conv.assistant or ''}")
+        ]
+
+    return conversations
+
+
+# # --- API с Excel экспортом ---
+# # --- Проверка на русский ---
+# def has_cyrillic(text: str) -> bool:
+#     return bool(re.search(r'[а-яё]', text.lower()))
+
+# @lru_cache(maxsize=5000)
+# def is_russian_cached(text: str) -> bool:
+#     try:
+#         return langid.classify(text.strip())[0] == 'ru'
+#     except:
+#         return False
+
+# def is_russian(text: str) -> bool:
+#     if not has_cyrillic(text):
+#         return False
+#     return is_russian_cached(text)
+
+
+# @app.get("/conversations/")
+# def get_conversations(
+#     dataset_id: int = Query(..., description="ID набора данных для фильтрации"),
+#     search: Optional[str] = Query(None, description="Текст для поиска в user и assistant"),
+#     exclude_russian: bool = Query(False, description="Исключить русскоязычные диалоги"),
+#     export_excel: bool = Query(False, description="Экспортировать результат в Excel"),
+#     db: Session = Depends(get_db)
+# ):
+#     query = db.query(Conversation).filter(Conversation.dataset_id == dataset_id)
+
+#     if search:
+#         like_pattern = f"%{search}%"
+#         query = query.filter(
+#             (Conversation.user.ilike(like_pattern)) |
+#             (Conversation.assistant.ilike(like_pattern))
+#         )
+
+#     conversations = query.all()
+
+#     # Фильтрация русскоязычных
+#     if exclude_russian:
+#         conversations = [
+#             conv for conv in conversations
+#             if not is_russian(f"{conv.user or ''} {conv.assistant or ''}")
+#         ]
+
+#     # Если НЕ нужно экспортировать Excel → обычный JSON ответ
+#     if not export_excel:
+#         return [
+#             {
+#                 "id": conv.id,
+#                 "user": conv.user,
+#                 "assistant": conv.assistant,
+#                 "dataset_id": conv.dataset_id
+#             }
+#             for conv in conversations
+#         ]
+
+#     # --- Экспорт в Excel ---
+#     data = [
+#         {
+#             "ID": conv.id,
+#             "User": conv.user,
+#             "Assistant": conv.assistant,
+#             "Dataset ID": conv.dataset_id
+#         }
+#         for conv in conversations
+#     ]
+
+#     df = pd.DataFrame(data)
+
+#     # Папка для экспорта
+#     export_dir = "exports"
+#     os.makedirs(export_dir, exist_ok=True)
+
+#     filename = f"conversations_{dataset_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+#     filepath = os.path.join(export_dir, filename)
+
+#     df.to_excel(filepath, index=False)
+
+#     return FileResponse(
+#         filepath,
+#         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+#         filename=filename
+#     )
+
+# def has_cyrillic(text: str) -> bool:
+#     """Quick check for Cyrillic characters"""
+#     return bool(re.search(r'[а-яё]', text.lower()))
+
+# @lru_cache(maxsize=5000)
+# def is_russian_cached(text: str) -> bool:
+#     """Cached language detection"""
+#     try:
+#         return langid.classify(text.strip())[0] == 'ru'
+#     except:
+#         return False
+
+# def is_russian(text: str) -> bool:
+#     """Optimized Russian detection"""
+#     if not has_cyrillic(text):
+#         return False
+    
+#     return is_russian_cached(text)
 
 
 
@@ -283,14 +328,66 @@ TABLE_NAME = "dictionary_table"  # your actual table name
 #         for row in source_rows
 #         if row[0] and row[0].strip().lower() not in other_words
 #     ]
-
-
 # CORRECT
-def get_unique_records(source: str, other_source: str, search: Optional[str] = None, limit: int = 50, offset: int = 0):
+def get_rejected_records(source: str, other_source: str, search: str = None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # Получаем все слова из каждого источника с учётом поиска
+    query = f"""
+        SELECT word, source, definition, examples
+        FROM {TABLE_NAME}
+        WHERE source = ?
+        AND word IN (
+            SELECT word FROM {TABLE_NAME} WHERE source = ?
+        )
+    """
+    params = [source, other_source]
+
+    if search:
+        query += " AND word LIKE ?"
+        params.append(f"%{search}%")
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "word": row[0],
+            "source": row[1],
+            "definition": row[2],
+            "examples": row[3]
+        } for row in rows
+    ]
+
+# Для скачивания неуникальных слов
+@app.get("/rejected-words-excel/")
+def rejected_words_excel(
+    search: str = None,
+    source: str = "file2",
+    other_source: str = "file1",
+    export_excel: bool = True
+):
+    rejected = get_rejected_records(source, other_source, search)
+
+    if export_excel:
+        df = pd.DataFrame(rejected)
+        file_name = f"Rejected_{source}_vs_{other_source}.xlsx"
+        df.to_excel(file_name, index=False)
+        return FileResponse(
+            file_name,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=file_name
+        )
+
+    return {"total_rejected": len(rejected), "rejected": rejected}
+
+
+
+def get_unique_records(source: str, other_source: str, search: Optional[str] = None, limit: Optional[int] = 50, offset: int = 0):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
     if search:
         cursor.execute(
             f"SELECT word, source, definition, examples FROM {TABLE_NAME} WHERE source = ? AND word = ?",
@@ -308,7 +405,6 @@ def get_unique_records(source: str, other_source: str, search: Optional[str] = N
 
     conn.close()
 
-    # Фильтруем уникальные слова
     unique_rows = [
         {
             "word": row[0],
@@ -321,10 +417,11 @@ def get_unique_records(source: str, other_source: str, search: Optional[str] = N
     ]
 
     total = len(unique_rows)
-    paginated = unique_rows[offset:offset+limit]
+    if limit is None:
+        paginated = unique_rows[offset:]
+    else:
+        paginated = unique_rows[offset:offset+limit]
     return paginated, total
-
-
 
 
 @app.get("/unique-words/")
@@ -348,55 +445,270 @@ def unique_words(
 
 
 
-# def get_unique_records(source: str, other_source: str, search: str = ""):
-#     conn = sqlite3.connect(DB_PATH)
-#     cursor = conn.cursor()
 
-#     # Формируем условие для поиска
-#     search_param = f"%{search.lower()}%"
-
-#     query = f"""
-#     SELECT word, source, definition, examples
-#     FROM {TABLE_NAME}
-#     WHERE source = ?
-#     AND lower(trim(word)) NOT IN (
-#         SELECT lower(trim(word)) FROM {TABLE_NAME} WHERE source = ?
-#     )
-#     """
-
-#     # Если есть поиск, добавляем условия LIKE для word, definition, examples
-#     if search:
-#         query += """
-#         AND (
-#             lower(word) LIKE ?
-#             OR lower(definition) LIKE ?
-#             OR lower(examples) LIKE ?
-#         )
-#         """
-
-#         cursor.execute(query, (source, other_source, search_param, search_param, search_param))
-#     else:
-#         cursor.execute(query, (source, other_source))
-
-#     results = [
-#         {
-#             "word": row[0],
-#             "source": row[1],
-#             "definition": row[2],
-#             "examples": row[3],
-#         }
-#         for row in cursor.fetchall()
-#     ]
-
-#     conn.close()
-#     return results
-
+# CORRECT Для скачивания уникальных слов
 # @app.get("/unique-words/")
-# def unique_words(search: str = Query("", description="Поисковый запрос")):
-#     # Вызов get_unique_records с передачей search
-#     oruscha_only = get_unique_records("file2", "file1", search)
-#     kyrgyzcha_only = get_unique_records("file1", "file2", search)
-#     return {
-#         "oruscha_kyrgyzcha_only": oruscha_only,
-#         "kyrgyzcha_oruscha_only": kyrgyzcha_only
+# def unique_words(
+#     search: Optional[str] = Query(None),
+#     limit: Optional[int] = Query(50, ge=1, le=200),
+#     offset: Optional[int] = Query(0, ge=0),
+#     export_excel: Optional[bool] = Query(False)
+# ):
+#     # Если экспорт в Excel, игнорируем лимит и оффсет, возвращаем все данные
+#     if export_excel:
+#         limit = None
+#         offset = 0
+
+#     # Для передачи None в функцию get_unique_records, нужно поправить функцию, чтобы она поддерживала limit=None
+#     oruscha_only, oruscha_total = get_unique_records("file2", "file1", search, limit, offset)
+#     kyrgyzcha_only, kyrgyzcha_total = get_unique_records("file1", "file2", search, limit, offset)
+
+#     if not export_excel:
+#         return {
+#             "oruscha_kyrgyzcha_only": oruscha_only,
+#             "oruscha_total": oruscha_total,
+#             "kyrgyzcha_oruscha_only": kyrgyzcha_only,
+#             "kyrgyzcha_total": kyrgyzcha_total
+#         }
+
+#     import io
+#     import pandas as pd
+#     from fastapi.responses import StreamingResponse
+
+#     df_rus_kg = pd.DataFrame(oruscha_only)
+#     df_kg_rus = pd.DataFrame(kyrgyzcha_only)
+
+#     output = io.BytesIO()
+#     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+#         df_rus_kg.to_excel(writer, index=False, sheet_name='Русско-Кырг')
+#         df_kg_rus.to_excel(writer, index=False, sheet_name='Кырг-Русс')
+
+#     output.seek(0)
+
+#     headers = {
+#         "Content-Disposition": "attachment; filename=unique_words.xlsx"
 #     }
+
+#     return StreamingResponse(
+#         output,
+#         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#         headers=headers
+#     )
+
+
+
+
+# @app.get("/unique-words-rus-kg/")
+# def unique_words_rus_kg(
+#     search: Optional[str] = Query(None),
+# ):
+#     # Берём ВСЕ данные
+#     oruscha_only, _ = get_unique_records("file2", "file1", search, limit=None, offset=0)
+
+#     import io
+#     import pandas as pd
+#     from fastapi.responses import StreamingResponse
+
+#     df_rus_kg = pd.DataFrame(oruscha_only)
+
+#     output = io.BytesIO()
+#     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+#         df_rus_kg.to_excel(writer, index=False, sheet_name='Русско-Кырг')
+
+#     output.seek(0)
+
+#     headers = {
+#         "Content-Disposition": "attachment; filename=rus_kyrg_unique.xlsx"
+#     }
+
+#     return StreamingResponse(
+#         output,
+#         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#         headers=headers
+#     )
+
+
+
+# @app.get("/unique-words-kg-rus/")
+# def unique_words_kg_rus(
+#     search: Optional[str] = Query(None),
+# ):
+#     # Берём ВСЕ данные
+#     kyrgyzcha_only, _ = get_unique_records("file1", "file2", search, limit=None, offset=0)
+
+#     import io
+#     import pandas as pd
+#     from fastapi.responses import StreamingResponse
+
+#     df_kg_rus = pd.DataFrame(kyrgyzcha_only)
+
+#     output = io.BytesIO()
+#     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+#         df_kg_rus.to_excel(writer, index=False, sheet_name='Кырг-Русс')
+
+#     output.seek(0)
+
+#     headers = {
+#         "Content-Disposition": "attachment; filename=kyrg_rus_unique.xlsx"
+#     }
+
+#     return StreamingResponse(
+#         output,
+#         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#         headers=headers
+#     )
+
+
+
+
+
+import re
+import os
+import shutil
+import tempfile
+import zipfile
+from typing import Set, List
+import pandas as pd
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+
+
+def normalize_word(word: str) -> str:
+    return word.strip().lower()
+
+def extract_words(text: str) -> List[str]:
+    return re.findall(r'\w+', text.lower())
+
+# def export_dialogues_by_words(db: Session, excel_path: str, output_dir: str):
+#     df_words = pd.read_excel(excel_path)
+#     if "word" not in df_words.columns:
+#         raise ValueError("Excel файл должен содержать колонку 'word'")
+#     words_list = df_words["word"].dropna().astype(str).tolist()
+#     words_set = set(normalize_word(w) for w in words_list if w.strip())
+
+#     conversations = db.query(Conversation).all()
+
+#     with_words, without_words = [], []
+
+#     for conv in conversations:
+#         text = f"{conv.user or ''} {conv.assistant or ''}"
+#         dialogue_words = extract_words(text)
+
+#         found = False
+#         for w in dialogue_words:
+#             normalized = normalize_word(w)
+#             if normalized in words_set:
+#                 found = True
+#                 break
+
+#         if found:
+#             with_words.append(conv)
+#         else:
+#             without_words.append(conv)
+
+#     def convs_to_dict(convs):
+#         return [
+#             {
+#                 "id": c.id,
+#                 "user": c.user,
+#                 "assistant": c.assistant
+#             }
+#             for c in convs
+#         ]
+
+#     file_with = os.path.join(output_dir, "with_words.xlsx")
+#     file_without = os.path.join(output_dir, "without_words.xlsx")
+
+#     pd.DataFrame(convs_to_dict(with_words)).to_excel(file_with, index=False)
+#     pd.DataFrame(convs_to_dict(without_words)).to_excel(file_without, index=False)
+
+#     return file_with, file_without
+
+def export_dialogues_by_words(db: Session, excel_path: str, output_dir: str):
+    df_words = pd.read_excel(excel_path)
+    if "word" not in df_words.columns:
+        raise ValueError("Excel файл должен содержать колонку 'word'")
+    words_list = df_words["word"].dropna().astype(str).tolist()
+    words_set = set(normalize_word(w) for w in words_list if w.strip())
+
+    conversations = db.query(Conversation).all()
+
+    with_words, without_words = [], []
+
+    # Сохраним для with_words еще найденные слова
+    with_words_found = []
+
+    for conv in conversations:
+        text = f"{conv.user or ''} {conv.assistant or ''}"
+        dialogue_words = extract_words(text)
+
+        found_words = set()  # для текущего диалога
+
+        for w in dialogue_words:
+            normalized = normalize_word(w)
+            if normalized in words_set:
+                found_words.add(normalized)
+
+        if found_words:
+            with_words.append(conv)
+            with_words_found.append(", ".join(sorted(found_words)))  # или list(found_words)
+        else:
+            without_words.append(conv)
+
+    def convs_to_dict(convs, found_words_list=None):
+        res = []
+        for i, c in enumerate(convs):
+            d = {
+                "id": c.id,
+                "user": c.user,
+                "assistant": c.assistant
+            }
+            if found_words_list:
+                d["found_words"] = found_words_list[i]
+            res.append(d)
+        return res
+
+    file_with = os.path.join(output_dir, "with_words.xlsx")
+    file_without = os.path.join(output_dir, "without_words.xlsx")
+
+    # Для with_words добавляем колонку found_words
+    pd.DataFrame(convs_to_dict(with_words, with_words_found)).to_excel(file_with, index=False)
+    pd.DataFrame(convs_to_dict(without_words)).to_excel(file_without, index=False)
+
+    return file_with, file_without
+
+
+@app.post("/download-dialogues-zip/")
+async def download_dialogues_zip(
+    excel_file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+):
+    if not excel_file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Файл должен быть в формате Excel")
+
+    tmpdir = tempfile.mkdtemp()
+    try:
+        excel_path = os.path.join(tmpdir, excel_file.filename)
+        with open(excel_path, "wb") as f:
+            shutil.copyfileobj(excel_file.file, f)
+
+        file_with, file_without = export_dialogues_by_words(db, excel_path, tmpdir)
+
+        zip_path = os.path.join(tmpdir, "dialogues.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(file_with, arcname="with_words.xlsx")
+            zipf.write(file_without, arcname="without_words.xlsx")
+
+        if background_tasks:
+            background_tasks.add_task(shutil.rmtree, tmpdir)
+
+        return FileResponse(path=zip_path, media_type="application/zip", filename="dialogues.zip")
+
+    except Exception as e:
+        shutil.rmtree(tmpdir)
+        raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
+
+
+# самый правильный dialogues9
