@@ -580,79 +580,58 @@ def normalize_word(word: str) -> str:
 def extract_words(text: str) -> List[str]:
     return re.findall(r'\w+', text.lower())
 
-# def export_dialogues_by_words(db: Session, excel_path: str, output_dir: str):
-#     df_words = pd.read_excel(excel_path)
-#     if "word" not in df_words.columns:
-#         raise ValueError("Excel файл должен содержать колонку 'word'")
-#     words_list = df_words["word"].dropna().astype(str).tolist()
-#     words_set = set(normalize_word(w) for w in words_list if w.strip())
-
-#     conversations = db.query(Conversation).all()
-
-#     with_words, without_words = [], []
-
-#     for conv in conversations:
-#         text = f"{conv.user or ''} {conv.assistant or ''}"
-#         dialogue_words = extract_words(text)
-
-#         found = False
-#         for w in dialogue_words:
-#             normalized = normalize_word(w)
-#             if normalized in words_set:
-#                 found = True
-#                 break
-
-#         if found:
-#             with_words.append(conv)
-#         else:
-#             without_words.append(conv)
-
-#     def convs_to_dict(convs):
-#         return [
-#             {
-#                 "id": c.id,
-#                 "user": c.user,
-#                 "assistant": c.assistant
-#             }
-#             for c in convs
-#         ]
-
-#     file_with = os.path.join(output_dir, "with_words.xlsx")
-#     file_without = os.path.join(output_dir, "without_words.xlsx")
-
-#     pd.DataFrame(convs_to_dict(with_words)).to_excel(file_with, index=False)
-#     pd.DataFrame(convs_to_dict(without_words)).to_excel(file_without, index=False)
-
-#     return file_with, file_without
 
 def export_dialogues_by_words(db: Session, excel_path: str, output_dir: str):
     df_words = pd.read_excel(excel_path)
     if "word" not in df_words.columns:
         raise ValueError("Excel файл должен содержать колонку 'word'")
+
+    # ✅ Базовые игнорируемые слова
+    ignore_words = {"берет", "сага"}
+
+    # ✅ Добавляем римские цифры (в нижнем регистре)
+    roman_numerals = {
+        "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
+        "xi", "xii", "xiii", "xiv", "xv", "xvi", "xvii", "xviii", "xix", "xx"
+    }
+    ignore_words.update(roman_numerals)
+
+    # ✅ Формируем множество слов из Excel, исключая игнорируемые
     words_list = df_words["word"].dropna().astype(str).tolist()
-    words_set = set(normalize_word(w) for w in words_list if w.strip())
+    words_set = {
+        normalize_word(w)
+        for w in words_list
+        if (
+            w.strip()
+            and normalize_word(w) not in ignore_words
+            and len(normalize_word(w)) > 1
+        )
+    }
 
     conversations = db.query(Conversation).all()
 
     with_words, without_words = [], []
-
-    # Сохраним для with_words еще найденные слова
     with_words_found = []
 
     for conv in conversations:
         text = f"{conv.user or ''} {conv.assistant or ''}"
         dialogue_words = extract_words(text)
 
-        found_words = set()  # для текущего диалога
+        # ✅ Игнорируем "берет", "сага", римские цифры и однобуквенные слова
+        found_words = {
+            normalize_word(w)
+            for w in dialogue_words
+            if (
+                normalize_word(w) in words_set
+                and normalize_word(w) not in ignore_words
+                and len(normalize_word(w)) > 1
+            )
+        }
 
-        for w in dialogue_words:
-            normalized = normalize_word(w)
-            if normalized in words_set:
-                found_words.add(normalized)
-
-        if found_words:
+        # ✅ Условие: только если найдено более 2 слов
+        if len(found_words) > 2:
             with_words.append(conv)
-            with_words_found.append(", ".join(sorted(found_words)))  # или list(found_words)
+            with_words_found.append(", ".join(sorted(found_words)))
         else:
             without_words.append(conv)
 
@@ -672,7 +651,6 @@ def export_dialogues_by_words(db: Session, excel_path: str, output_dir: str):
     file_with = os.path.join(output_dir, "with_words.xlsx")
     file_without = os.path.join(output_dir, "without_words.xlsx")
 
-    # Для with_words добавляем колонку found_words
     pd.DataFrame(convs_to_dict(with_words, with_words_found)).to_excel(file_with, index=False)
     pd.DataFrame(convs_to_dict(without_words)).to_excel(file_without, index=False)
 
@@ -710,5 +688,3 @@ async def download_dialogues_zip(
         shutil.rmtree(tmpdir)
         raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
 
-
-# самый правильный dialogues9
